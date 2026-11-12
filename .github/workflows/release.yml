@@ -60,14 +60,25 @@ jobs:
       - name: Verify uploaded update assets before publishing
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_ID: ${{ steps.tauri.outputs.releaseId }}
         shell: pwsh
         run: |
           gh release download $env:GITHUB_REF_NAME --dir artifacts --pattern 'latest.json' --pattern '*.exe' --pattern '*.sig'
           if ($LASTEXITCODE -ne 0) { throw 'Release assets could not be downloaded' }
+          if ($env:RELEASE_ID -notmatch '^\d+$') { throw 'Invalid release ID' }
+          gh api "repos/$env:GITHUB_REPOSITORY/releases/$env:RELEASE_ID" | Out-File -FilePath artifacts/release.json -Encoding utf8
+          if ($LASTEXITCODE -ne 0) { throw 'Release metadata could not be downloaded' }
+          node scripts/normalize-update-manifest.mjs artifacts
+          if ($LASTEXITCODE -ne 0) { throw 'Update manifest URL normalization failed' }
           npm run release:validate -- artifacts
           if ($LASTEXITCODE -ne 0) { throw 'Update manifest validation failed' }
           cargo run --manifest-path src-tauri/Cargo.toml --example verify_release -- artifacts
           if ($LASTEXITCODE -ne 0) { throw 'Cryptographic verification failed' }
+          gh release upload $env:GITHUB_REF_NAME artifacts/latest.json --clobber
+          if ($LASTEXITCODE -ne 0) { throw 'Verified manifest upload failed' }
+          gh release download $env:GITHUB_REF_NAME --dir artifacts-roundtrip --pattern 'latest.json'
+          if ($LASTEXITCODE -ne 0) { throw 'Verified manifest could not be downloaded again' }
+          if ((Get-FileHash artifacts/latest.json).Hash -ne (Get-FileHash artifacts-roundtrip/latest.json).Hash) { throw 'Uploaded manifest bytes differ' }
       - name: Publish verified release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

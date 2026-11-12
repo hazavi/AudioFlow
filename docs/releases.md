@@ -18,6 +18,8 @@ Update the stable version in `package.json`, `package-lock.json`, `src-tauri/Car
 
 `.github/workflows/release.yml` installs Node and Rust, validates the tag and versions, runs tests, builds the Windows x86_64 NSIS installer, generates updater artifacts, and uses the official `tauri-apps/tauri-action` to sign and upload a draft release. The action creates `latest.json`. The workflow downloads the uploaded manifest, installer, and `.sig`, checks their URLs and Windows platform keys, cryptographically verifies the installer with the public key, checks the signature-bound version, and only then publishes the draft as the latest stable release. A failed step leaves it unpublished. The workflow uses `contents: write`; it does not need a personal access token.
 
+The action can generate API asset URLs in its draft manifest. Before verification, the workflow matches those URLs against the release's asset metadata and converts them to public versioned download URLs. It uploads the verified manifest and checks the downloaded bytes again before publishing. Unknown assets, foreign repository URLs, and mismatched release versions are rejected.
+
 For a local signed build:
 
 ```powershell
