@@ -9,9 +9,12 @@
     @media(prefers-color-scheme:dark){text{fill:#f1f5f9}.detail{fill:#94a3b8}}
   </style>
   <g class="icon">
-    <rect x="109" y="25" width="58" height="43" rx="4"/>
-    <path d="M109 36h58m-47-5h1m5 0h1m12 14 13 10-13 4z"/>
-    <path d="M166 70h18m-6-6 6 6-6 6"/>
+    <rect x="116" y="25" width="58" height="40" rx="4"/>
+    <path d="M116 36h58"/>
+    <circle cx="124" cy="30.5" r="1"/>
+    <circle cx="131" cy="30.5" r="1"/>
+    <path d="M139 43L151 50L139 57Z"/>
+    <path d="M128 76h34M134 70l-6 6 6 6M156 70l6 6-6 6"/>
     <rect x="421" y="25" width="58" height="39" rx="4"/>
     <path d="M450 64v10m-12 0h24m-23-29 8 8 15-16"/>
     <path d="M737 41h12l16-12v42l-16-12h-12zM778 39q12 11 0 22m8-31q22 20 0 40"/>
