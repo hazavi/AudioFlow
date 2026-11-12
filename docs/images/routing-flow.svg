@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="180" viewBox="0 0 900 180" role="img" aria-labelledby="title description">
+  <title id="title">How AudioFlow routes audio</title>
+  <desc id="description">Move an app window to a monitor. AudioFlow checks its monitor assignment and application rules, then routes the app's audio to the assigned speaker.</desc>
+  <style>
+    text{font-family:Segoe UI,Arial,sans-serif;text-anchor:middle;fill:#374151;font-size:17px;font-weight:600}
+    .detail{font-size:13px;font-weight:400;fill:#64748b}
+    .icon{fill:none;stroke:#3b82f6;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+    .arrow{fill:none;stroke:#64748b;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+    @media(prefers-color-scheme:dark){text{fill:#f1f5f9}.detail{fill:#94a3b8}}
+  </style>
+  <g class="icon">
+    <rect x="109" y="25" width="58" height="43" rx="4"/>
+    <path d="M109 36h58m-47-5h1m5 0h1m12 14 13 10-13 4z"/>
+    <path d="M166 70h18m-6-6 6 6-6 6"/>
+    <rect x="421" y="25" width="58" height="39" rx="4"/>
+    <path d="M450 64v10m-12 0h24m-23-29 8 8 15-16"/>
+    <path d="M737 41h12l16-12v42l-16-12h-12zM778 39q12 11 0 22m8-31q22 20 0 40"/>
+  </g>
+  <g class="arrow"><path d="M235 50h100m-8-8 8 8-8 8M565 50h100m-8-8 8 8-8 8"/></g>
+  <text x="145" y="112">Move an app window</text>
+  <text x="145" y="137" class="detail">Choose its screen</text>
+  <text x="450" y="112">AudioFlow checks routing</text>
+  <text x="450" y="137" class="detail">Monitor assignment + app rules</text>
+  <text x="755" y="112">Hear it on that speaker</text>
+  <text x="755" y="137" class="detail">Windows applies the app output</text>
+</svg>

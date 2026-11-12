@@ -18,12 +18,13 @@ _Interface illustration with sample names. The app displays real Windows devices
 
 ## How it works
 
-```mermaid
-flowchart LR
-    A[Move an app window] --> B[Check monitor and rules] --> C[Route its audio]
-```
+![Move an app window, AudioFlow checks its monitor and rules, then Windows routes its audio to the assigned speaker](docs/images/routing-flow.svg)
 
 Assign an output to each monitor, then enable routing. AudioFlow runs in the tray and preserves manual Windows outputs by default. A switch is confirmed only after Windows reports the resulting audio session.
+
+![YouTube on Monitor 1 plays through Speaker 1, while Netflix on Monitor 2 plays through Speaker 2](docs/images/independent-audio.png)
+
+_Example with separate application audio processes. Browser tabs sharing an audio process share one output._
 
 ## Features
 
