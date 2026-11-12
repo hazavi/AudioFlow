@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="760" viewBox="0 0 1120 760" role="img" aria-labelledby="title description">
+  <title id="title">AudioFlow dashboard interface illustration</title>
+  <desc id="description">An illustrated dark dashboard with a narrow sidebar, two monitor output selectors, an audio application list, and routing status. Device and application names are examples, not live hardware data.</desc>
+  <style>
+    text{font-family:Segoe UI,Arial,sans-serif;fill:#f5f5f5;font-size:12px}
+    .small{font-size:11px;fill:#a1a1aa}.label{font-family:Consolas,monospace;font-size:9px;letter-spacing:1px;fill:#a1a1aa}.page-title{font-size:25px;font-weight:600}.metric{font-size:25px}
+    .muted{fill:#a1a1aa}.blue{fill:#60a5fa}.green{fill:#34d399}.heading{font-size:13px;font-weight:600}
+    .line{stroke:#34363b;stroke-width:1}.icon{fill:none;stroke:#a1a1aa;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round}
+    .panel{fill:#161719;stroke:#34363b;stroke-width:1}.control{fill:#101113;stroke:#34363b;stroke-width:1}
+  </style>
+  <rect x=".5" y=".5" width="1119" height="759" rx="6" fill="#101113" stroke="#34363b"/>
+  <path d="M1 48h1118M182 48v689M1 737h1118" class="line"/>
+  <path d="M22 15h14v11H22zM29 21h14v11H29z" fill="#161719" stroke="#647fa7"/>
+  <path d="M25 24h3l2-6 3 12 3-7h4" fill="none" stroke="#3b82f6" stroke-width="1.6"/>
+  <text x="55" y="28" font-weight="600" letter-spacing="1.5">AUDIOFLOW</text>
+  <path d="M165 16v17" class="line"/>
+  <text x="179" y="28" class="label">AUDIO ROUTING UTILITY</text>
+  <circle cx="834" cy="24" r="2.5" fill="#34d399"/><text x="844" y="28" class="label green">ROUTING ACTIVE</text>
+  <path d="M972 18a7 7 0 1 0 7 9 7 7 0 0 1-7-9M1002 24h10M1038 20h8v8h-8M1081 20l8 8m0-8-8 8" class="icon"/>
+
+  <rect x="1" y="49" width="180" height="687" fill="#161719"/>
+  <text x="21" y="80" class="label">WORKSPACE</text>
+  <rect x="11" y="98" width="160" height="35" rx="4" fill="#17243a" stroke="#34363b"/>
+  <path d="M12 101v29" stroke="#3b82f6" stroke-width="2"/>
+  <g class="icon">
+    <path d="M25 109h5v5h-5zM33 109h5v5h-5zM25 117h5v5h-5zM33 117h5v5h-5z" stroke="#60a5fa"/>
+    <path d="M25 153h14v10H25zM32 163v4m-4 0h8M25 194h14v12H25zM25 198h14M25 240h14m-14 5h14m-14 5h14M25 283h3l3-6 4 12 2-6h3M25 325h14m-14 6h14"/>
+    <circle cx="30" cy="325" r="2" fill="#161719"/><circle cx="35" cy="331" r="2" fill="#161719"/>
+  </g>
+  <text x="49" y="120">Dashboard</text><text x="154" y="120" class="blue">›</text>
+  <g class="muted"><text x="49" y="163" class="muted">Monitors</text><text x="49" y="205" class="muted">Applications</text><text x="49" y="248" class="muted">Routing Rules</text><text x="49" y="290" class="muted">Activity</text><text x="49" y="333" class="muted">Settings</text></g>
+  <path d="M12 631h158M12 705h158" class="line"/>
+  <circle cx="23" cy="652" r="2.5" fill="#34d399"/><text x="35" y="656" font-size="11">Routing is active</text>
+  <text x="35" y="674" class="label" font-size="8">RUNS LOCALLY ON WINDOWS</text>
+  <text x="22" y="724" class="label">AUDIOFLOW v0.1.0</text>
+
+  <text x="209" y="79" class="label">AUDIOFLOW  /  DASHBOARD</text>
+  <text x="209" y="112" class="page-title">Dashboard</text>
+  <text x="209" y="134" class="small">Your audio follows your screens.</text>
+  <rect x="1006" y="99" width="86" height="31" rx="4" class="panel"/>
+  <path d="M1020 110a5 5 0 1 1-1 7m0-9v4h4" class="icon"/><text x="1035" y="119" font-size="11">Refresh</text>
+
+  <rect x="209" y="154" width="883" height="61" rx="5" class="panel"/>
+  <rect x="224" y="168" width="32" height="32" rx="4" fill="#17243a" stroke="#3b82f6"/>
+  <path d="M233 180v8m5-12v16m5-19v22m5-16v10" stroke="#60a5fa" stroke-width="1.7" stroke-linecap="round"/>
+  <text x="269" y="180" font-weight="600">Automatic routing active</text>
+  <text x="269" y="198" class="small">Application audio follows your monitor assignments.</text>
+  <text x="917" y="187" class="label">AUTOMATIC ROUTING</text>
+  <rect x="1048" y="175" width="29" height="17" rx="4" fill="#3b82f6"/><rect x="1063" y="178" width="11" height="11" rx="2" fill="#fff"/>
+
+  <rect x="209" y="231" width="883" height="68" rx="5" class="panel"/>
+  <path d="M429 232v66M650 232v66M871 232v66" class="line"/>
+  <text x="225" y="251" class="label">CONNECTED MONITORS</text><text x="225" y="282" class="metric">02</text>
+  <text x="445" y="251" class="label">AUDIO OUTPUTS</text><text x="445" y="282" class="metric">03</text>
+  <text x="666" y="251" class="label">ACTIVE APPLICATIONS</text><text x="666" y="282" class="metric">02</text>
+  <text x="887" y="251" class="label">VERIFIED SWITCHES</text><text x="887" y="282" class="metric">—</text>
+
+  <rect x="209" y="316" width="883" height="216" rx="5" class="panel"/>
+  <text x="224" y="340" class="heading">Monitor outputs</text><text x="1014" y="340" class="small">Configure ↗</text>
+  <path d="M210 354h881M650 355v176" class="line"/>
+  <text x="225" y="378" class="label">MONITOR 01</text><text x="555" y="378" class="label green">CONNECTED</text>
+  <text x="667" y="378" class="label">MONITOR 02</text><text x="997" y="378" class="label green">CONNECTED</text>
+  <g fill="none" stroke="#60a5fa" stroke-width="1.3"><rect x="225" y="401" width="31" height="23" rx="2"/><path d="M240 424v5m-8 0h16"/></g>
+  <g fill="none" stroke="#a1a1aa" stroke-width="1.3"><rect x="667" y="401" width="31" height="23" rx="2"/><path d="M682 424v5m-8 0h16"/></g>
+  <text x="236" y="417" class="blue" font-size="11">1</text><text x="678" y="417" font-size="11">2</text>
+  <text x="270" y="407" font-weight="600">Built-in display</text><text x="270" y="426" class="small">1920 × 1200 · 60 Hz</text><text x="270" y="443" class="label">PRIMARY DISPLAY</text>
+  <text x="712" y="407" font-weight="600">External display</text><text x="712" y="426" class="small">1920 × 1080 · 144 Hz</text><text x="712" y="443" class="label">SECONDARY DISPLAY</text>
+  <text x="225" y="466" class="small">Audio output</text><text x="667" y="466" class="small">Audio output</text>
+  <rect x="225" y="477" width="408" height="29" rx="4" class="control"/><text x="235" y="496" font-size="11">Built-in speakers</text><path d="m614 488 4 4 4-4" class="icon"/>
+  <rect x="667" y="477" width="409" height="29" rx="4" class="control"/><text x="677" y="496" font-size="11">Display audio</text><path d="m1056 488 4 4 4-4" class="icon"/>
+  <text x="225" y="522" class="label" font-size="8">ASSIGNMENT SAVED LOCALLY</text><text x="603" y="522" class="small">Test</text>
+  <text x="667" y="522" class="label" font-size="8">ASSIGNMENT SAVED LOCALLY</text><text x="1046" y="522" class="small">Test</text>
+
+  <rect x="209" y="549" width="883" height="119" rx="5" class="panel"/>
+  <text x="224" y="573" class="heading">Audio applications</text><text x="1028" y="573" class="small">View all ↗</text>
+  <path d="M210 587h881M210 627h881" class="line"/>
+  <rect x="225" y="597" width="23" height="22" rx="3" fill="#1c1d20" stroke="#34363b"/><path d="M232 605v6m4-10v14m4-10v6" stroke="#60a5fa" stroke-width="1.4"/>
+  <rect x="225" y="637" width="23" height="22" rx="3" fill="#1c1d20" stroke="#34363b"/><path d="M232 645v6m4-10v14m4-10v6" stroke="#60a5fa" stroke-width="1.4"/>
+  <text x="260" y="607" font-weight="600">Media player</text><text x="260" y="619" class="label" font-size="8">FOLLOW MONITOR</text>
+  <text x="260" y="647" font-weight="600">Voice chat</text><text x="260" y="659" class="label" font-size="8">FIXED DEVICE</text>
+  <text x="497" y="612" class="small">Monitor 02</text><text x="497" y="652" class="small">Monitor 01</text>
+  <text x="700" y="612" font-size="11">Display audio</text><text x="700" y="652" font-size="11">Headphones</text>
+  <circle cx="964" cy="608" r="2" fill="#34d399"/><text x="973" y="612" class="small green">Active stream</text>
+  <circle cx="964" cy="648" r="2" fill="#34d399"/><text x="973" y="652" class="small green">Active stream</text>
+
+  <rect x="209" y="684" width="883" height="38" rx="5" class="panel"/>
+  <text x="224" y="708" class="heading">Recent activity</text><text x="356" y="708" class="small">Routing events appear after Windows reports the result.</text>
+  <circle cx="17" cy="749" r="2.5" fill="#34d399"/><text x="27" y="752" class="label" font-size="8">ROUTING: ACTIVE</text>
+  <text x="178" y="752" class="label" font-size="8">MONITORS: 2</text><text x="291" y="752" class="label" font-size="8">AUDIO DEVICES: 3</text>
+  <text x="703" y="752" class="label" font-size="8">ILLUSTRATED PREVIEW · SAMPLE DEVICES AND APPLICATIONS</text>
+</svg>
