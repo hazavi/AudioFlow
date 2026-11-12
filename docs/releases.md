@@ -14,7 +14,7 @@ The local key was generated through Tauri's signer outside the source repository
 
 ## Publish
 
-Update the stable version in `package.json`, `package-lock.json`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`, and `src-tauri/tauri.conf.json`. Push a matching tag such as `v0.2.0`.
+Update the stable version in `package.json`, `package-lock.json`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`, and `src-tauri/tauri.conf.json`. Add the matching release notes under `docs/release-notes/`, then push the version tag, such as `v0.2.0`. The workflow requires a nonempty notes file for that tag.
 
 `.github/workflows/release.yml` installs Node and Rust, validates the tag and versions, runs tests, builds the Windows x86_64 NSIS installer, generates updater artifacts, and uses the official `tauri-apps/tauri-action` to sign and upload a draft release. The action creates `latest.json`. The workflow downloads the uploaded manifest, installer, and `.sig`, checks their URLs and Windows platform keys, cryptographically verifies the installer with the public key, checks the signature-bound version, and only then publishes the draft as the latest stable release. A failed step leaves it unpublished. The workflow uses `contents: write`; it does not need a personal access token.
 

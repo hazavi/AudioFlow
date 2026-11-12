@@ -34,6 +34,9 @@ jobs:
         run: npm run release:configure
       - name: Validate release version
         run: npm run release:validate
+      - name: Prepare versioned release notes
+        id: notes
+        run: node scripts/prepare-release-notes.mjs
       - name: Test routing decisions and frontend logic
         run: |
           cargo test --manifest-path src-tauri/Cargo.toml --lib
@@ -48,7 +51,8 @@ jobs:
           releaseName: AudioFlow ${{ github.ref_name }}
           releaseDraft: true
           prerelease: false
-          generateReleaseNotes: true
+          releaseBody: ${{ steps.notes.outputs.body }}
+          generateReleaseNotes: false
           uploadUpdaterJson: true
           uploadUpdaterSignatures: true
           updaterJsonPreferNsis: true
