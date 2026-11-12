@@ -1,0 +1,12 @@
+node_modules/
+dist/
+src-tauri/target/
+.tools/
+*.key
+*.key.pub
+*.pfx
+*.pem
+.env*
+! .env.example
+artifacts/
+*.log
