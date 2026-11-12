@@ -1,12 +1,14 @@
 node_modules/
 dist/
 src-tauri/target/
+src-tauri/gen/
 .tools/
 *.key
 *.key.pub
 *.pfx
 *.pem
 .env*
-! .env.example
+!.env.example
 artifacts/
 *.log
+*.tsbuildinfo
