@@ -4,14 +4,19 @@
   "description": "Local AudioFlow desktop controls and signed updates",
   "windows": ["main"],
   "permissions": [
-    "core:default",
+    "audioflow-controls",
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    "core:resources:allow-close",
     "core:window:allow-minimize",
     "core:window:allow-toggle-maximize",
     "core:window:allow-is-maximized",
     "core:window:allow-close",
     "core:window:allow-show",
     "core:window:allow-start-dragging",
-    "updater:default",
+    "updater:allow-check",
+    "updater:allow-download",
+    "updater:allow-install",
     "process:allow-restart"
   ]
 }

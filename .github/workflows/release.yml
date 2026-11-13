@@ -3,32 +3,35 @@ on:
   push:
     tags: ["v*"]
 permissions:
-  contents: write
+  contents: read
 concurrency:
   group: audioflow-release
   cancel-in-progress: false
 jobs:
   release:
     runs-on: windows-latest
+    permissions:
+      contents: write
     env:
       AUDIOFLOW_UPDATER_PUBLIC_KEY: ${{ vars.AUDIOFLOW_UPDATER_PUBLIC_KEY }}
-      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "24"
           cache: npm
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
           targets: x86_64-pc-windows-msvc
       - name: Install frontend dependencies
         run: npm ci
-      - name: Validate signing inputs
+      - name: Audit frontend dependencies
+        run: npm audit --audit-level=high
+      - name: Validate public verification key
         shell: pwsh
         run: |
-          if (-not $env:TAURI_SIGNING_PRIVATE_KEY) { throw 'Missing TAURI_SIGNING_PRIVATE_KEY secret' }
           if (-not $env:AUDIOFLOW_UPDATER_PUBLIC_KEY -and -not (Test-Path src-tauri/updater.pub)) { throw 'Missing public verification key' }
       - name: Configure actual repository
         run: npm run release:configure
@@ -39,13 +42,15 @@ jobs:
         run: node scripts/prepare-release-notes.mjs
       - name: Test routing decisions and frontend logic
         run: |
-          cargo test --manifest-path src-tauri/Cargo.toml --lib
+          cargo test --locked --manifest-path src-tauri/Cargo.toml --lib
           npm test
       - name: Build and sign Windows installer as a draft
         id: tauri
-        uses: tauri-apps/tauri-action@v1
+        uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: AudioFlow ${{ github.ref_name }}
@@ -56,7 +61,7 @@ jobs:
           uploadUpdaterJson: true
           uploadUpdaterSignatures: true
           updaterJsonPreferNsis: true
-          args: --target x86_64-pc-windows-msvc --bundles nsis
+          args: --target x86_64-pc-windows-msvc --bundles nsis -- --locked
       - name: Verify uploaded update assets before publishing
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -72,7 +77,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Update manifest URL normalization failed' }
           npm run release:validate -- artifacts
           if ($LASTEXITCODE -ne 0) { throw 'Update manifest validation failed' }
-          cargo run --manifest-path src-tauri/Cargo.toml --example verify_release -- artifacts
+          cargo run --locked --manifest-path src-tauri/Cargo.toml --example verify_release -- artifacts
           if ($LASTEXITCODE -ne 0) { throw 'Cryptographic verification failed' }
           gh release upload $env:GITHUB_REF_NAME artifacts/latest.json --clobber
           if ($LASTEXITCODE -ne 0) { throw 'Verified manifest upload failed' }

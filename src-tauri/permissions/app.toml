@@ -1,0 +1,9 @@
+[[permission]]
+identifier = "audioflow-controls"
+description = "AudioFlow controls available to the local main window."
+commands.allow = [
+  "get_snapshot", "scan_now", "save_settings", "set_monitor_assignment",
+  "save_rule", "delete_rule", "test_audio_device", "clear_activity",
+  "export_config", "import_config", "export_activity", "export_file",
+  "open_repository", "open_releases", "prepare_update", "resume_after_update", "reset_config"
+]

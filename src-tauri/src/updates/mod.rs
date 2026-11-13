@@ -6,10 +6,23 @@ pub fn repository(app: &AppHandle) -> Option<String> {
         return None;
     }
     let endpoint = plugin.get("endpoints")?.as_array()?.first()?.as_str()?;
+    repository_url(endpoint)
+}
+fn repository_url(endpoint: &str) -> Option<String> {
     let repo = endpoint
         .strip_prefix("https://github.com/")?
         .strip_suffix("/releases/latest/download/latest.json")?;
-    if repo.split('/').count() != 2 || repo.contains(['?', '#', ' ']) {
+    let (owner, name) = repo.split_once('/')?;
+    if owner.is_empty()
+        || name.is_empty()
+        || matches!(name, "." | "..")
+        || !owner
+            .bytes()
+            .all(|c| c.is_ascii_alphanumeric() || c == b'-')
+        || !name
+            .bytes()
+            .all(|c| c.is_ascii_alphanumeric() || b"_.-".contains(&c))
+    {
         return None;
     }
     Some(format!("https://github.com/{repo}"))
@@ -33,4 +46,40 @@ pub fn register(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
 async fn tokio_sleep(duration: std::time::Duration) {
     // Avoid a new runtime: Tauri's async runtime is backed by Tokio.
     tokio::time::sleep(duration).await;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn repository_links_accept_only_plain_github_repository_paths() {
+        assert_eq!(
+            repository_url(
+                "https://github.com/hazavi/AudioFlow/releases/latest/download/latest.json"
+            )
+            .as_deref(),
+            Some("https://github.com/hazavi/AudioFlow")
+        );
+        for repo in [
+            "/AudioFlow",
+            "owner/",
+            "owner/..",
+            "owner/repo/extra",
+            "owner/repo?query",
+            "owner/repo#fragment",
+            "owner/repo%2fextra",
+            "owner/repo\\extra",
+            "owner@host/repo",
+        ] {
+            assert!(repository_url(&format!(
+                "https://github.com/{repo}/releases/latest/download/latest.json"
+            ))
+            .is_none());
+        }
+        assert!(repository_url(
+            "https://github.com.evil.example/hazavi/AudioFlow/releases/latest/download/latest.json"
+        )
+        .is_none());
+    }
 }

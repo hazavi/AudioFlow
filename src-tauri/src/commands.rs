@@ -115,6 +115,15 @@ pub fn export_activity(engine: tauri::State<'_, Engine>) -> Result<String, Strin
     serde_json::to_string_pretty(&engine.snapshot().activity).map_err(|e| e.to_string())
 }
 #[tauri::command]
+pub fn open_repository(app: AppHandle) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    let repo = crate::updates::repository(&app)
+        .ok_or("The GitHub repository has not been configured for this build.")?;
+    app.opener()
+        .open_url(repo, None::<String>)
+        .map_err(|e| e.to_string())
+}
+#[tauri::command]
 pub fn open_releases(app: AppHandle) -> Result<(), String> {
     use tauri_plugin_opener::OpenerExt;
     let repo = crate::updates::repository(&app)

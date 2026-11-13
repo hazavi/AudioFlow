@@ -12,3 +12,11 @@ src-tauri/gen/
 artifacts/
 *.log
 *.tsbuildinfo
+*.p12
+*.p8
+*.keystore
+*.jks
+.npmrc
+.netrc
+credentials.json
+secrets.json

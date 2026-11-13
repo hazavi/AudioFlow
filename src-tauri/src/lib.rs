@@ -1,8 +1,10 @@
 mod commands;
 mod config;
 mod engine;
+mod lifecycle;
 mod models;
 mod native;
+mod security;
 mod tray;
 mod updates;
 
@@ -26,7 +28,12 @@ pub fn native_diagnostics() -> Result<serde_json::Value, String> {
 }
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, _, _| {
+        .manage(lifecycle::Shutdown::default())
+        .plugin(tauri_plugin_single_instance::init(|app, args, _| {
+            if args.iter().any(|arg| arg == lifecycle::QUIT_ARGUMENT) {
+                app.exit(0);
+                return;
+            }
             if let Some(w) = app.get_webview_window("main") {
                 let _ = w.show();
                 let _ = w.set_focus();
@@ -48,6 +55,31 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
+            if std::env::args().any(|arg| arg == lifecycle::QUIT_ARGUMENT) {
+                app.handle().exit(0);
+                return Ok(());
+            }
+            let development_url = app
+                .config()
+                .build
+                .dev_url
+                .clone()
+                .filter(|_| cfg!(debug_assertions));
+            tauri::WebviewWindowBuilder::from_config(app, &app.config().app.windows[0])?
+                .on_navigation(move |url| {
+                    let trusted = security::trusted_navigation(url, development_url.as_ref());
+                    if !trusted {
+                        log::warn!(
+                            "Blocked webview navigation to {}://{}",
+                            url.scheme(),
+                            url.host_str().unwrap_or("")
+                        );
+                    }
+                    trusted
+                })
+                .on_new_window(|_, _| tauri::webview::NewWindowResponse::Deny)
+                .devtools(cfg!(debug_assertions))
+                .build()?;
             updates::register(app)?;
             let storage = config::Storage::new(&app.path().app_config_dir()?)
                 .map_err(std::io::Error::other)?;
@@ -91,6 +123,7 @@ pub fn run() {
             commands::import_config,
             commands::export_activity,
             commands::open_releases,
+            commands::open_repository,
             commands::prepare_update,
             commands::resume_after_update,
             commands::reset_config,
@@ -113,8 +146,8 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("AudioFlow could not start")
         .run(|app, event| {
-            if let tauri::RunEvent::ExitRequested { .. } = event {
-                app.state::<engine::Engine>().shutdown();
+            if let tauri::RunEvent::ExitRequested { api, code, .. } = event {
+                app.state::<lifecycle::Shutdown>().request(app, &api, code);
             }
         });
 }
