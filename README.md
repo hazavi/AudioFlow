@@ -4,8 +4,7 @@
 
 Your sound. Your screen. Automatically.
 
-AudioFlow makes your app audio follow its screen. Assign speakers or headphones to each monitor, then move a supported app between displays and its sound follows automatically. Keep a video on one screen and music or calls on another, with each app using the output you choose.
-
+AudioFlow automatically sends each app’s audio to the speakers or headphones connected to its monitor. Enjoy independent sound across multiple screens without ever switching audio settings.
 Set rules for individual apps, test your speakers, and manage routing from the system tray. AudioFlow runs locally on Windows, with dark and light themes and signed updates.
 
 [Download for Windows](https://github.com/hazavi/AudioFlow/releases/latest) · [Build guide](DEVELOPMENT.md) · [Validation](VALIDATION.md)
