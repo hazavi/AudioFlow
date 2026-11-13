@@ -1,3 +1,5 @@
+!define AUDIOFLOW_ICON_SOURCE "${__FILEDIR__}\..\icons\icon.ico"
+
 ; Find the process whose image is the installed executable. File scanners can also
 ; appear in Restart Manager's resource list, so that list cannot identify the app.
 !macro AUDIOFLOW_FIND_PROCESS executablePath result
@@ -107,4 +109,48 @@
     ${EndIf}
     Pop $R3
   ${EndIf}
+!macroend
+
+!macro AUDIOFLOW_REFRESH_SHORTCUT_ICON shortcut
+  Push $0
+  Push $1
+  Push $2
+  Push $3
+  ${If} ${FileExists} "${shortcut}"
+    !insertmacro IsShortcutTarget "${shortcut}" "$INSTDIR\${MAINBINARYNAME}.exe"
+    Pop $3
+    ${If} $3 = 1
+      !insertmacro ComHlpr_CreateInProcInstance ${CLSID_ShellLink} ${IID_IShellLink} r0 ""
+      ${If} $0 P<> 0
+        ${IUnknown::QueryInterface} $0 '("${IID_IPersistFile}", .r1)'
+        ${If} $1 P<> 0
+          ${IPersistFile::Load} $1 '("${shortcut}", ${STGM_READWRITE})'
+          ${IShellLink::SetIconLocation} $0 '(w "$INSTDIR\audioflow-icon-${VERSION}.ico", i 0)'
+          ${IPersistFile::Save} $1 '("${shortcut}", 1)'
+          ${IUnknown::Release} $1 ""
+          ; Notify Explorer that this existing shortcut changed.
+          System::Call 'shell32::SHChangeNotify(i 0x2000, i 0x2005, w "${shortcut}", p 0)'
+        ${EndIf}
+        ${IUnknown::Release} $0 ""
+      ${EndIf}
+    ${EndIf}
+  ${EndIf}
+  Pop $3
+  Pop $2
+  Pop $1
+  Pop $0
+!macroend
+
+!macro NSIS_HOOK_POSTINSTALL
+  SetOutPath "$INSTDIR"
+  ; Each release gets a new icon path so Explorer cannot reuse an old executable icon.
+  File /oname=audioflow-icon-${VERSION}.ico "${AUDIOFLOW_ICON_SOURCE}"
+  !insertmacro AUDIOFLOW_REFRESH_SHORTCUT_ICON "$DESKTOP\${PRODUCTNAME}.lnk"
+  !insertmacro AUDIOFLOW_REFRESH_SHORTCUT_ICON "$SMPROGRAMS\${PRODUCTNAME}.lnk"
+  !insertmacro AUDIOFLOW_REFRESH_SHORTCUT_ICON "$SMPROGRAMS\$AppStartMenuFolder\${PRODUCTNAME}.lnk"
+!macroend
+
+!macro NSIS_HOOK_POSTUNINSTALL
+  Delete "$INSTDIR\audioflow-icon-*.ico"
+  RMDir "$INSTDIR"
 !macroend
