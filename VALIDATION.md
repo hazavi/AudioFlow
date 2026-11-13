@@ -2,6 +2,13 @@
 
 Tested on Windows on 12 November 2026. Automated checks and physical audio-session observations are recorded separately.
 
+## v0.1.4 verification
+
+- Passed the production frontend build and 15 frontend tests.
+- Verified the source ICO and installed executable both contain the waveform icon.
+- Tested an isolated NSIS install and update. An existing shortcut with a default executable icon was updated to the versioned waveform ICO, while its target and custom arguments were preserved. The Start menu shortcut was updated too.
+- Verified uninstall removed the test shortcut and versioned icon after its background process completed.
+
 ## v0.1.3 verification
 
 Verified on Windows on 13 November 2026.
