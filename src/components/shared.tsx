@@ -314,9 +314,11 @@ export function AppList({
               : "No eligible window"}
           </span>
           <span className="truncate">
-            {a.endpointIds
-              .map((id) => s.devices.find((d) => d.id === id)?.name || id)
-              .join(", ") || "Not observed"}
+            {a.active
+              ? a.endpointIds
+                  .map((id) => s.devices.find((d) => d.id === id)?.name || id)
+                  .join(", ") || "Not observed"
+              : "No active playback"}
           </span>
           <span>
             <span className={`audio-status ${a.active ? "success" : "muted"}`}>

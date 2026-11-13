@@ -1,4 +1,18 @@
-use crate::models::{AppWindow, Bounds, Config, Device, Monitor, RoutingMode, Rule};
+use crate::models::{AppWindow, Bounds, Config, Device, Monitor, RoutingMode, Rule, Session};
+
+pub fn observed_endpoints(sessions: &[&Session]) -> Vec<String> {
+    // Old inactive sessions can remain on a previous output after Windows moves
+    // playback. Show the active outputs, with stable ordering for idle apps too.
+    let playing = sessions.iter().any(|s| s.active);
+    let mut endpoints: Vec<_> = sessions
+        .iter()
+        .filter(|s| !playing || s.active)
+        .map(|s| s.endpoint_id.clone())
+        .collect();
+    endpoints.sort();
+    endpoints.dedup();
+    endpoints
+}
 
 pub fn intersection(a: Bounds, b: Bounds) -> i64 {
     let w = (i64::from(a.x) + i64::from(a.width)).min(i64::from(b.x) + i64::from(b.width))

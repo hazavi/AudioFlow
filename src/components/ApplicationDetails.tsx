@@ -54,7 +54,7 @@ export function ApplicationDetails({
             {s.monitors.find((m) => m.id === current.monitorId)?.name ||
               "No eligible window"}
           </dd>
-          <dt>Observed outputs</dt>
+          <dt>{current.active ? "Active outputs" : "Idle session outputs"}</dt>
           <dd>
             {current.endpointIds
               .map((id) => s.devices.find((d) => d.id === id)?.name || id)

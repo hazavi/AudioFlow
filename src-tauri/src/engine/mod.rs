@@ -4,7 +4,9 @@ use crate::{
     models::*,
     native::{Platform, Routes},
 };
-use decision::{decide, matching_rule, select_monitor, select_window, Decision};
+use decision::{
+    decide, matching_rule, observed_endpoints, select_monitor, select_window, Decision,
+};
 use std::{
     collections::{HashMap, HashSet},
     sync::{mpsc, Arc, Mutex},
@@ -209,7 +211,7 @@ struct Worker<R: tauri::Runtime = tauri::Wry> {
     // Audio utility processes in the same app share one window selection.
     // Key by owner PID and creation time so child restarts and PID reuse are safe.
     last_windows: HashMap<(u32, u64), isize>,
-    last_monitors: HashMap<u32, String>,
+    last_monitors: HashMap<(u32, u64), String>,
     seen: HashSet<(u32, u64)>,
     deferred: HashMap<(u32, u64), Option<String>>,
     awaiting: HashMap<u32, (String, Option<String>, Instant)>,
@@ -583,7 +585,7 @@ impl<R: tauri::Runtime> Worker<R> {
                         name: format!("Process {pid}"),
                         executable: String::new(),
                         monitor_id: None,
-                        endpoint_ids: own.iter().map(|s| s.endpoint_id.clone()).collect(),
+                        endpoint_ids: observed_endpoints(&own),
                         active: own.iter().any(|s| s.active),
                         peak: None,
                         mode: RoutingMode::Ignore,
@@ -609,7 +611,6 @@ impl<R: tauri::Runtime> Worker<R> {
                 self.managed.remove(pid);
                 self.pending.remove(pid);
                 self.awaiting.remove(pid);
-                self.last_monitors.remove(pid);
             }
             let mut owner = *pid;
             let mut owner_identity = identity;
@@ -646,21 +647,16 @@ impl<R: tauri::Runtime> Worker<R> {
                     select_monitor(
                         w.bounds,
                         &monitors,
-                        self.last_monitors.get(pid).map(String::as_str),
+                        self.last_monitors.get(&owner_key).map(String::as_str),
                     )
                 })
                 .map(|m| m.id.clone());
             if let Some(m) = &monitor {
-                self.last_monitors.insert(*pid, m.clone());
+                self.last_monitors.insert(owner_key, m.clone());
             }
             let app_sessions: Vec<_> = sessions.iter().filter(|s| s.pid == *pid).collect();
             let active = app_sessions.iter().any(|s| s.active);
-            let endpoints: Vec<_> = app_sessions
-                .iter()
-                .map(|s| s.endpoint_id.clone())
-                .collect::<HashSet<_>>()
-                .into_iter()
-                .collect();
+            let endpoints = observed_endpoints(&app_sessions);
             let peak = app_sessions.iter().filter_map(|s| s.peak).reduce(f32::max);
             let rule = matching_rule(&self.config, &executable).cloned();
             let mode = rule
@@ -808,6 +804,7 @@ impl<R: tauri::Runtime> Worker<R> {
                             status = "Waiting for switching delay".into();
                         } else {
                             let original = current.as_ref().unwrap().clone();
+                            log::debug!("Routing PID {pid} ({name}), owner {owner}, window {:?}, monitor {monitor:?}, target {target:?}", selected.map(|w| w.handle));
                             match if target.is_none() {
                                 platform.clear_process_route(*pid)
                             } else {
@@ -897,7 +894,11 @@ impl<R: tauri::Runtime> Worker<R> {
         let live: HashSet<_> = self.seen.iter().map(|(pid, _)| *pid).collect();
         self.awaiting.retain(|pid, _| live.contains(pid));
         self.failures.retain(|pid, _| live.contains(pid));
-        self.last_monitors.retain(|pid, _| live.contains(pid));
+        self.last_monitors.retain(|(pid, birth), _| {
+            platform
+                .process(*pid)
+                .is_ok_and(|(_, identity)| identity == *birth)
+        });
         self.last_switch.retain(|pid, _| live.contains(pid));
         self.last_windows.retain(|(pid, birth), _| {
             platform
@@ -1344,6 +1345,115 @@ mod tests {
         assert_eq!(
             platform.get_current_route(5).unwrap(),
             [Some("b".into()), Some("b".into()), Some("b".into())]
+        );
+    }
+    #[test]
+    fn active_output_label_is_stable_with_stale_idle_sessions() {
+        let (mut worker, _dir) = scan_worker();
+        let mut platform = scan_fixture();
+        platform.sessions.push(Session {
+            pid: 2,
+            endpoint_id: "b".into(),
+            active: false,
+            peak: None,
+        });
+        platform.sessions.push(platform.sessions[0].clone());
+        worker.scan(&platform);
+        let writes = platform.writes.borrow().len();
+        for _ in 0..100 {
+            platform.sessions.reverse();
+            worker.scan(&platform);
+            let state = worker.state.lock().unwrap();
+            assert_eq!(
+                state
+                    .applications
+                    .iter()
+                    .find(|a| a.pid == 2)
+                    .unwrap()
+                    .endpoint_ids,
+                vec!["a"]
+            );
+        }
+        assert_eq!(
+            platform.writes.borrow().len(),
+            writes,
+            "Rendering old sessions must not route audio"
+        );
+        for session in &mut platform.sessions {
+            session.active = false;
+        }
+        for _ in 0..100 {
+            platform.sessions.reverse();
+            worker.scan(&platform);
+            let state = worker.state.lock().unwrap();
+            assert_eq!(
+                state
+                    .applications
+                    .iter()
+                    .find(|a| a.pid == 2)
+                    .unwrap()
+                    .endpoint_ids,
+                vec!["a", "b"]
+            );
+        }
+        for session in &mut platform.sessions {
+            session.active = session.pid == 2;
+        }
+        worker.scan(&platform);
+        assert_eq!(
+            worker
+                .state
+                .lock()
+                .unwrap()
+                .applications
+                .iter()
+                .find(|a| a.pid == 2)
+                .unwrap()
+                .endpoint_ids,
+            vec!["a", "b"],
+            "Real simultaneous active outputs must remain visible"
+        );
+    }
+    #[test]
+    fn new_audio_children_share_monitor_hysteresis_at_a_display_boundary() {
+        let (mut worker, _dir) = scan_worker();
+        let mut platform = scan_fixture();
+        platform.sessions.retain(|s| s.pid != 3);
+        platform.windows[0].bounds.x = 500;
+        worker.scan(&platform);
+        platform.windows[0].bounds.x = 620; // Within the existing monitor's margin.
+        worker.scan(&platform);
+        platform.sessions.push(Session {
+            pid: 3,
+            endpoint_id: "a".into(),
+            active: true,
+            peak: None,
+        });
+        worker.scan(&platform);
+        assert_eq!(
+            platform.get_current_route(3).unwrap(),
+            platform.get_current_route(2).unwrap(),
+            "A new audio child must not choose a competing monitor"
+        );
+        let writes = platform.writes.borrow().len();
+        for _ in 0..100 {
+            platform.sessions.reverse();
+            worker.scan(&platform);
+            assert_eq!(
+                platform.get_current_route(3).unwrap(),
+                platform.get_current_route(2).unwrap()
+            );
+        }
+        assert_eq!(platform.writes.borrow().len(), writes);
+        platform.windows[0].bounds.x = 800;
+        worker.scan(&platform);
+        assert_eq!(
+            platform.get_current_route(2).unwrap(),
+            [Some("b".into()), Some("b".into()), Some("b".into())]
+        );
+        assert_eq!(
+            platform.get_current_route(3).unwrap(),
+            platform.get_current_route(2).unwrap()
         );
     }
 }
