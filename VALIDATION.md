@@ -2,6 +2,18 @@
 
 Tested on Windows on 12 November 2026. Automated checks and physical audio-session observations are recorded separately.
 
+## v0.1.6 verification
+
+Verified on Windows on 13 November 2026.
+
+- Passed 18 Rust tests and 20 frontend tests, plus the production frontend build.
+- A read-only sample of the installed v0.1.5 app found stable Edge route preferences and playback on one endpoint, with old idle sessions still present on both endpoints. The application list previously collected endpoint IDs through an unordered set, which could change their displayed order on each scan.
+- New worker regressions verify stable active and idle output labels across 100 reversed session enumerations each, preserve genuinely simultaneous active outputs, and confirm that these display updates cause no routing writes. A separate regression checks shared monitor hysteresis when a new browser audio child appears near a display boundary.
+- The generated 650 ms speaker-test waveform reaches 0.25 peak amplitude (previously 0.06), with fades and no clipping at 44.1, 48, and 96 kHz. This measures the waveform; perceived loudness still depends on Windows volume and the speakers.
+- Updater tests cover delayed configuration, releases appearing after startup, native ticks while frontend timers are suspended, cleanup, automatic retries after offline failures, and enabling automatic checks.
+
+The routing regressions use simulated Windows state. Confirmation of the reported audible switching still requires testing the installed release with the affected apps.
+
 ## v0.1.5 verification
 
 Verified on Windows on 13 November 2026.

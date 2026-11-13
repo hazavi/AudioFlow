@@ -34,6 +34,8 @@ One dedicated worker owns its COM apartment, endpoint enumerator, policy object,
 
 Window selection stays with the previous eligible window before considering focus or area. Browser audio children share that selection through the window owner's PID and creation time. Session gaps preserve route ownership and window tracking while the processes remain alive; they do not restore old preferences. The restore-on-exit setting controls restoration when AudioFlow shuts down. Tool windows are excluded from routing candidates.
 
+Monitor hysteresis uses the same owner identity, so a newly created audio child cannot pick a competing output near a display boundary. Application output labels use active sessions when playback is active, deduplicate endpoints, and sort their IDs. Inactive session history remains available in application details. Update checks start when configuration arrives, repeat every five minutes using native wake events and a frontend timer, and retry failures after one minute.
+
 All desktop coordinates are read with per-monitor DPI awareness. GDI provides physical bounds and persistent monitor interface paths; QueryDisplayConfig provides friendly names. Device endpoints are independent of display order. Friendly-name suggestions are advisory only.
 
 The provider reads and writes the render preference for console, multimedia, and communications roles. It captures the prior values, rolls back a partial setter failure, reads preferences back, and reports policy acceptance separately from observed live audio. There is no global-default setter and no clear-all operation. Endpoint test playback uses a shared-mode WASAPI client on the selected IMMDevice and a locally generated envelope-limited 350 ms tone.

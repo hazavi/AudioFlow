@@ -42,6 +42,8 @@ _Example with separate application audio processes. Browser tabs sharing an audi
 - Tray operation, Windows autostart, and dark/light/system themes.
 - Signed GitHub updates with installation confirmation.
 
+Updates are detected automatically at startup and every five minutes, including while AudioFlow runs in the tray. Failed checks retry after a minute. The app asks before installing.
+
 ## Get started
 
 1. Install the [Windows x64 release](https://github.com/hazavi/AudioFlow/releases/latest).
