@@ -2,6 +2,16 @@
 
 Tested on Windows on 12 November 2026. Automated checks and physical audio-session observations are recorded separately.
 
+## v0.1.5 verification
+
+Verified on Windows on 13 November 2026.
+
+- Passed 15 Rust tests, 15 frontend tests, and the production frontend build.
+- New regression tests run the actual worker reconciliation loop against a mock Windows provider. They check 100 focus and enumeration changes without extra route writes, temporary missing and failed session enumeration, audio-child restarts, owner PID reuse, and moving the tracked window between monitors.
+- Verified that playback gaps preserve ownership with either restore-on-exit setting, while explicit restoration still restores every original role preference.
+
+These regression checks use simulated Windows state and do not play or reroute the user's applications. The reported browser playback issue still needs confirmation after installing this version.
+
 ## v0.1.4 verification
 
 - Passed the production frontend build and 15 frontend tests.
