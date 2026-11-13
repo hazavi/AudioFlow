@@ -2,6 +2,18 @@
 
 Tested on Windows on 12 November 2026. Automated checks and physical audio-session observations are recorded separately.
 
+## v0.1.3 verification
+
+Verified on Windows on 13 November 2026.
+
+- Passed 15 frontend tests, 12 Rust tests, and the production frontend build. The new tests cover navigation restrictions, repository URL validation, the confirmed update sequence, and download/signature failure handling.
+- Built an isolated NSIS package with a separate application identity. Verified same-version update-mode replacement while the app was running, a delayed graceful exit, automatic restart, and preservation of saved settings and assignments. Uninstall also completed while that app was running.
+- Reproduced the installer failure when Restart Manager listed McAfee Framework Host as a file user. The corrected check matched the installed executable's process path, and both update and uninstall passed while McAfee remained running.
+- Confirmed the bundled UI loaded under the new content policy and native permissions, including the GitHub title-bar control.
+- Git history and built frontend secret scans passed. The npm audit reported zero vulnerabilities. Rust audit reported zero vulnerability findings and five informational advisories in packages excluded from the Windows dependency graph, as listed in [security details](SECURITY.md).
+
+These installer checks used an isolated debug package. An installed production older-to-newer in-app upgrade remains a separate check.
+
 ## Automated checks
 
 - Frontend production build: passed with TypeScript checking and Vite bundling.

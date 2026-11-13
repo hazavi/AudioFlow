@@ -11,6 +11,13 @@ Set rules for individual apps, test your speakers, and manage routing from the s
 [Download for Windows](https://github.com/hazavi/AudioFlow/releases/latest) · [Build guide](DEVELOPMENT.md) · [Validation](VALIDATION.md)
 
 ![Windows checks](https://github.com/hazavi/AudioFlow/actions/workflows/checks.yml/badge.svg)
+![Security checks](https://github.com/hazavi/AudioFlow/actions/workflows/security.yml/badge.svg)
+
+![Tauri 2](https://img.shields.io/badge/Tauri_2-24C8D8?logo=tauri&logoColor=white)
+![Rust](https://img.shields.io/badge/Rust-000000?logo=rust&logoColor=white)
+![React 19](https://img.shields.io/badge/React_19-149ECA?logo=react&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![Tailwind CSS 4](https://img.shields.io/badge/Tailwind_CSS_4-06B6D4?logo=tailwindcss&logoColor=white)
 
 ## Preview
 
@@ -56,4 +63,4 @@ npm run desktop
 
 See the [development guide](DEVELOPMENT.md) for builds and tests, [release guide](docs/releases.md) for signing, and [validation record](VALIDATION.md) for tested behavior and remaining checks.
 
-Local-first: no account, server, or telemetry. [MIT license](LICENSE) · [Third-party notices](THIRD_PARTY_NOTICES.md) · [Contributing](CONTRIBUTING.md)
+Local-first: no account, server, or telemetry. [Security](SECURITY.md) · [MIT license](LICENSE) · [Third-party notices](THIRD_PARTY_NOTICES.md) · [Contributing](CONTRIBUTING.md)
