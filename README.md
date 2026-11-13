@@ -48,7 +48,7 @@ _Example with separate application audio processes. Browser tabs sharing an audi
 2. Choose and test an audio output for each monitor.
 3. Enable automatic routing and move a supported audio app between screens.
 
-Windows 11 is the primary target. Browser tabs sharing an audio process share an output. Some apps need playback restarted before a new preference takes effect. AudioFlow never changes the global Windows default output.
+Windows 11 is the primary target. Browser windows and tabs sharing an audio process share an output. AudioFlow keeps following the same eligible window, so changing focus or pausing playback does not switch its speaker. Move that window between monitors to change the output. Some apps need playback restarted before a new preference takes effect. AudioFlow never changes the global Windows default output.
 
 ## Build from source
 

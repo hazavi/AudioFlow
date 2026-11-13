@@ -337,8 +337,9 @@ export function BrowserNotice() {
       <AlertCircle size={15} />
       <p>
         Windows routes audio per process. Browser windows and tabs that share an
-        audio process share an output. AudioFlow uses the most recently focused
-        eligible window.
+        audio process share an output. AudioFlow keeps following the same
+        eligible window. Move that window to change its output; changing focus
+        alone keeps audio on its current screen.
       </p>
     </div>
   );
