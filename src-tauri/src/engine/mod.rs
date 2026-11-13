@@ -195,9 +195,9 @@ impl Pending {
         now.duration_since(self.since) >= delay
     }
 }
-struct Worker {
+struct Worker<R: tauri::Runtime = tauri::Wry> {
     icons: HashMap<String, Option<String>>,
-    app: AppHandle,
+    app: AppHandle<R>,
     storage: Storage,
     state: Arc<Mutex<Snapshot>>,
     config: Config,
@@ -206,7 +206,9 @@ struct Worker {
     managed: HashMap<u32, Managed>,
     pending: HashMap<u32, Pending>,
     relinquished: HashSet<(u32, u64)>,
-    last_windows: HashMap<u32, isize>,
+    // Audio utility processes in the same app share one window selection.
+    // Key by owner PID and creation time so child restarts and PID reuse are safe.
+    last_windows: HashMap<(u32, u64), isize>,
     last_monitors: HashMap<u32, String>,
     seen: HashSet<(u32, u64)>,
     deferred: HashMap<(u32, u64), Option<String>>,
@@ -216,8 +218,8 @@ struct Worker {
     activity_dirty: bool,
     last_flush: Instant,
 }
-impl Worker {
-    fn new(app: AppHandle, storage: Storage, state: Arc<Mutex<Snapshot>>, locked: bool) -> Self {
+impl<R: tauri::Runtime> Worker<R> {
+    fn new(app: AppHandle<R>, storage: Storage, state: Arc<Mutex<Snapshot>>, locked: bool) -> Self {
         let config = state
             .lock()
             .unwrap_or_else(|e| e.into_inner())
@@ -535,11 +537,11 @@ impl Worker {
                 vec![]
             }
         };
-        let (sessions, sessions_ok) = match platform.list_audio_sessions(&devices) {
-            Ok(v) => (v, true),
+        let sessions = match platform.list_audio_sessions(&devices) {
+            Ok(v) => v,
             Err(e) => {
                 errors.push(e);
-                (vec![], false)
+                vec![]
             }
         };
         let windows = match platform.windows() {
@@ -608,9 +610,9 @@ impl Worker {
                 self.pending.remove(pid);
                 self.awaiting.remove(pid);
                 self.last_monitors.remove(pid);
-                self.last_windows.remove(pid);
             }
             let mut owner = *pid;
+            let mut owner_identity = identity;
             let mut candidates: Vec<AppWindow> =
                 windows.iter().filter(|w| w.pid == owner).cloned().collect();
             for _ in 0..8 {
@@ -623,19 +625,21 @@ impl Worker {
                 if *parent == owner || *parent == 0 {
                     break;
                 }
-                owner = *parent;
                 // Only climb within the same executable, so a launcher cannot own a child app's sound.
-                if !platform
-                    .process(owner)
-                    .is_ok_and(|(path, _)| path.eq_ignore_ascii_case(&executable))
-                {
+                let Ok((path, birth)) = platform.process(*parent) else {
+                    break;
+                };
+                if !path.eq_ignore_ascii_case(&executable) {
                     break;
                 }
+                owner = *parent;
+                owner_identity = birth;
                 candidates = windows.iter().filter(|w| w.pid == owner).cloned().collect();
             }
-            let selected = select_window(&candidates, self.last_windows.get(pid).copied());
+            let owner_key = (owner, owner_identity);
+            let selected = select_window(&candidates, self.last_windows.get(&owner_key).copied());
             if let Some(w) = selected {
-                self.last_windows.insert(*pid, w.handle);
+                self.last_windows.insert(owner_key, w.handle);
             }
             let monitor = selected
                 .and_then(|w| {
@@ -880,36 +884,25 @@ impl Worker {
                 window_count: candidates.len(),
             });
         }
-        // Restore still-running owned processes with no sessions before dropping their ownership.
-        let inactive: Vec<_> = self
-            .managed
-            .keys()
-            .filter(|pid| sessions_ok && !pids.contains(pid))
-            .copied()
-            .collect();
-        for pid in inactive {
-            if let Some(owned) = self.managed.remove(&pid) {
-                if platform.process(pid).is_err() {
-                    self.managed.insert(pid, owned);
-                    continue;
-                }
-                if let Err(e) = owned.restore_if_owned(platform, pid) {
-                    errors.push(e);
-                    self.managed.insert(pid, owned);
-                }
-            }
-        }
+        // Session recreation is normal during a route change or playback pause.
+        // Keep ownership until shutdown; restoring here can create a feedback loop:
+        // route -> session disappears -> restore -> session returns -> route again.
         self.pending.retain(|pid, _| pids.contains(pid));
-        self.awaiting.retain(|pid, _| pids.contains(pid));
-        self.failures.retain(|pid, _| pids.contains(pid));
-        self.last_windows.retain(|pid, _| pids.contains(pid));
-        self.last_monitors.retain(|pid, _| pids.contains(pid));
-        self.last_switch.retain(|pid, _| pids.contains(pid));
         self.seen.retain(|(pid, birth)| {
             pids.contains(pid)
                 || platform
                     .process(*pid)
                     .is_ok_and(|(_, identity)| identity == *birth)
+        });
+        let live: HashSet<_> = self.seen.iter().map(|(pid, _)| *pid).collect();
+        self.awaiting.retain(|pid, _| live.contains(pid));
+        self.failures.retain(|pid, _| live.contains(pid));
+        self.last_monitors.retain(|pid, _| live.contains(pid));
+        self.last_switch.retain(|pid, _| live.contains(pid));
+        self.last_windows.retain(|(pid, birth), _| {
+            platform
+                .process(*pid)
+                .is_ok_and(|(_, identity)| identity == *birth)
         });
         self.deferred
             .retain(|identity, _| self.seen.contains(identity));
@@ -946,6 +939,9 @@ mod tests {
     use super::*;
     use crate::native::AudioRoutingProvider;
     use std::cell::RefCell;
+    #[cfg(target_os = "windows")]
+    #[link(name = "resource", kind = "dylib")]
+    unsafe extern "C" {}
     struct FakeWindows {
         identity: u64,
         current: RefCell<Routes>,
@@ -1060,5 +1056,294 @@ mod tests {
         assert!(!pending.ready(&a, now + Duration::from_millis(400), delay));
         assert!(!pending.ready(&a, now + Duration::from_millis(700), delay));
         assert!(pending.ready(&a, now + Duration::from_millis(750), delay));
+    }
+
+    // Exercise the real reconciliation loop without a desktop window or live audio writes.
+    struct ScanWindows {
+        processes: HashMap<u32, (String, u64)>,
+        sessions: Vec<Session>,
+        windows: Vec<AppWindow>,
+        routes: RefCell<HashMap<u32, Routes>>,
+        writes: RefCell<Vec<u32>>,
+        fail_sessions: bool,
+    }
+    impl AudioRoutingProvider for ScanWindows {
+        fn list_output_devices(&self) -> Result<Vec<Device>, String> {
+            Ok(["a", "b"]
+                .map(|id| Device {
+                    id: id.into(),
+                    name: id.into(),
+                    is_default: id == "a",
+                })
+                .into())
+        }
+        fn list_audio_sessions(&self, _: &[Device]) -> Result<Vec<Session>, String> {
+            if self.fail_sessions {
+                Err("Temporary session enumeration failure".into())
+            } else {
+                Ok(self.sessions.clone())
+            }
+        }
+        fn get_current_route(&self, pid: u32) -> Result<Routes, String> {
+            Ok(self.routes.borrow().get(&pid).cloned().unwrap_or_default())
+        }
+        fn set_process_output(&self, pid: u32, target: Option<&str>) -> Result<(), String> {
+            self.restore_routes(
+                pid,
+                &[
+                    target.map(str::to_owned),
+                    target.map(str::to_owned),
+                    target.map(str::to_owned),
+                ],
+            )
+        }
+        fn restore_routes(&self, pid: u32, routes: &Routes) -> Result<(), String> {
+            self.routes.borrow_mut().insert(pid, routes.clone());
+            self.writes.borrow_mut().push(pid);
+            Ok(())
+        }
+        fn supports_process_routing(&self) -> bool {
+            true
+        }
+        fn get_last_error(&self) -> Option<String> {
+            None
+        }
+    }
+    impl Platform for ScanWindows {
+        fn monitors(&self) -> Result<Vec<Monitor>, String> {
+            Ok([("left", 0), ("right", 1000)]
+                .map(|(id, x)| Monitor {
+                    id: id.into(),
+                    name: id.into(),
+                    device_name: id.into(),
+                    bounds: Bounds {
+                        x,
+                        y: 0,
+                        width: 1000,
+                        height: 1000,
+                    },
+                    primary: x == 0,
+                    refresh_rate: None,
+                    scale: None,
+                })
+                .into())
+        }
+        fn windows(&self) -> Result<Vec<AppWindow>, String> {
+            Ok(self.windows.clone())
+        }
+        fn process(&self, pid: u32) -> Result<(String, u64), String> {
+            self.processes
+                .get(&pid)
+                .cloned()
+                .ok_or_else(|| "Process exited".into())
+        }
+        fn parents(&self) -> HashMap<u32, u32> {
+            HashMap::from([(2, 1), (3, 1), (5, 1)])
+        }
+        fn test_speaker(&self, _: &str) -> Result<(), String> {
+            Ok(())
+        }
+    }
+    fn scan_fixture() -> ScanWindows {
+        ScanWindows {
+            processes: [
+                (1, "browser.exe"),
+                (2, "browser.exe"),
+                (3, "browser.exe"),
+                (4, "music.exe"),
+            ]
+            .into_iter()
+            .map(|(pid, path)| (pid, (path.into(), u64::from(pid))))
+            .collect(),
+            sessions: [2, 3, 4]
+                .map(|pid| Session {
+                    pid,
+                    endpoint_id: "a".into(),
+                    active: true,
+                    peak: None,
+                })
+                .into(),
+            windows: [(11, 1, 0, true), (12, 1, 1000, false), (14, 4, 1000, false)]
+                .map(|(handle, pid, x, focused)| AppWindow {
+                    handle,
+                    pid,
+                    bounds: Bounds {
+                        x,
+                        y: 0,
+                        width: 800,
+                        height: 600,
+                    },
+                    focused,
+                })
+                .into(),
+            routes: RefCell::new(HashMap::new()),
+            writes: RefCell::new(vec![]),
+            fail_sessions: false,
+        }
+    }
+    struct TestStorage(std::path::PathBuf);
+    impl Drop for TestStorage {
+        fn drop(&mut self) {
+            for name in ["managed-routes.json", "managed-routes.json.tmp"] {
+                let _ = std::fs::remove_file(self.0.join(name));
+            }
+            let _ = std::fs::remove_dir(&self.0);
+        }
+    }
+    fn scan_worker() -> (Worker<tauri::test::MockRuntime>, TestStorage) {
+        let app = tauri::test::mock_app();
+        let dir = TestStorage(
+            std::env::temp_dir().join(format!("audioflow-scan-{}", uuid::Uuid::new_v4())),
+        );
+        let storage = Storage::new(&dir.0).unwrap();
+        let mut config = Config::default();
+        config.settings.routing_enabled = true;
+        config.settings.switch_delay_ms = 0;
+        config.assignments.insert("left".into(), "a".into());
+        config.assignments.insert("right".into(), "b".into());
+        let state = Arc::new(Mutex::new(Snapshot {
+            monitors: vec![],
+            devices: vec![],
+            sessions: vec![],
+            applications: vec![],
+            config,
+            activity: vec![],
+            routing_supported: true,
+            compatibility: String::new(),
+            successful_changes: 0,
+            last_scan: None,
+            errors: vec![],
+            version: "test".into(),
+            repository: None,
+            updater_configured: false,
+        }));
+        (
+            Worker::new(app.handle().clone(), storage, state, false),
+            dir,
+        )
+    }
+    #[test]
+    fn stationary_windows_keep_routes_through_focus_and_enumeration_changes() {
+        let (mut worker, _dir) = scan_worker();
+        let mut platform = scan_fixture();
+        worker.scan(&platform);
+        assert_eq!(platform.writes.borrow().len(), 3);
+        for scan in 0..100 {
+            for window in &mut platform.windows {
+                window.focused = window.handle == if scan % 2 == 0 { 12 } else { 11 };
+            }
+            platform.windows.reverse();
+            worker.scan(&platform);
+        }
+        assert_eq!(
+            platform.writes.borrow().len(),
+            3,
+            "Focus alone must not rewrite outputs"
+        );
+        assert_eq!(
+            platform.get_current_route(2).unwrap(),
+            [Some("a".into()), Some("a".into()), Some("a".into())]
+        );
+        assert_eq!(
+            platform.get_current_route(3).unwrap(),
+            platform.get_current_route(2).unwrap()
+        );
+        assert_eq!(
+            platform.get_current_route(4).unwrap(),
+            [Some("b".into()), Some("b".into()), Some("b".into())]
+        );
+        platform
+            .windows
+            .iter_mut()
+            .find(|w| w.handle == 11)
+            .unwrap()
+            .bounds
+            .x = 1000;
+        worker.scan(&platform);
+        assert_eq!(
+            platform.writes.borrow().len(),
+            5,
+            "Moving the tracked window must route both browser audio children once"
+        );
+        assert_eq!(
+            platform.get_current_route(2).unwrap(),
+            platform.get_current_route(4).unwrap()
+        );
+        assert_eq!(
+            platform.get_current_route(3).unwrap(),
+            platform.get_current_route(4).unwrap()
+        );
+    }
+    #[test]
+    fn missing_or_failed_sessions_do_not_restore_or_forget_a_live_app() {
+        for restore_on_exit in [false, true] {
+            let (mut worker, _dir) = scan_worker();
+            worker.config.settings.restore_on_exit = restore_on_exit;
+            let mut platform = scan_fixture();
+            worker.scan(&platform);
+            let sessions = std::mem::take(&mut platform.sessions);
+            for _ in 0..3 {
+                worker.scan(&platform);
+            }
+            assert_eq!(
+                platform.writes.borrow().len(),
+                3,
+                "A playback gap must not restore old routes"
+            );
+            assert_eq!(worker.managed.len(), 3);
+            platform.fail_sessions = true;
+            worker.scan(&platform);
+            platform.fail_sessions = false;
+            platform.windows[0].focused = false;
+            platform.windows[1].focused = true;
+            platform.sessions = sessions;
+            worker.scan(&platform);
+            assert_eq!(
+                platform.writes.borrow().len(),
+                3,
+                "Playback recreation must keep the tracked window and route"
+            );
+            worker.restore(&platform).unwrap();
+            assert_eq!(
+                platform.writes.borrow().len(),
+                6,
+                "Explicit shutdown restoration still restores all owned routes"
+            );
+            assert!(platform
+                .routes
+                .borrow()
+                .values()
+                .all(|r| r == &[None, None, None]));
+        }
+    }
+    #[test]
+    fn browser_audio_child_restart_reuses_owner_window_but_owner_pid_reuse_does_not() {
+        let (mut worker, _dir) = scan_worker();
+        let mut platform = scan_fixture();
+        worker.scan(&platform);
+        platform.processes.remove(&2);
+        platform.processes.remove(&3);
+        platform.sessions.retain(|s| s.pid == 4);
+        worker.scan(&platform);
+        platform.windows[0].focused = false;
+        platform.windows[1].focused = true;
+        platform.processes.insert(5, ("browser.exe".into(), 5));
+        platform.sessions.push(Session {
+            pid: 5,
+            endpoint_id: "a".into(),
+            active: true,
+            peak: None,
+        });
+        worker.scan(&platform);
+        assert_eq!(
+            platform.get_current_route(5).unwrap(),
+            [Some("a".into()), Some("a".into()), Some("a".into())]
+        );
+        platform.processes.insert(1, ("browser.exe".into(), 100));
+        worker.scan(&platform);
+        assert_eq!(
+            platform.get_current_route(5).unwrap(),
+            [Some("b".into()), Some("b".into()), Some("b".into())]
+        );
     }
 }

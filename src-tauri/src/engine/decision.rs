@@ -36,8 +36,9 @@ pub fn select_window<'a>(
 ) -> Option<&'a AppWindow> {
     windows
         .iter()
-        .find(|w| w.focused)
-        .or_else(|| windows.iter().find(|w| Some(w.handle) == previous))
+        // Focus changes alone must not move a shared browser audio process.
+        .find(|w| Some(w.handle) == previous)
+        .or_else(|| windows.iter().find(|w| w.focused))
         .or_else(|| {
             windows.iter().max_by_key(|w| {
                 (
@@ -282,7 +283,7 @@ mod tests {
         ));
     }
     #[test]
-    fn focus_then_last_window_then_largest() {
+    fn tracked_window_then_focus_then_largest() {
         let mut ws = vec![
             AppWindow {
                 handle: 1,
@@ -310,6 +311,7 @@ mod tests {
         assert_eq!(select_window(&ws, None).unwrap().handle, 2);
         assert_eq!(select_window(&ws, Some(1)).unwrap().handle, 1);
         ws[1].focused = true;
-        assert_eq!(select_window(&ws, Some(1)).unwrap().handle, 2);
+        assert_eq!(select_window(&ws, Some(1)).unwrap().handle, 1);
+        assert_eq!(select_window(&ws, Some(99)).unwrap().handle, 2);
     }
 }

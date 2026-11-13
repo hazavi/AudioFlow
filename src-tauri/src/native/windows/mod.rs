@@ -339,6 +339,7 @@ impl Platform for WindowsPlatform {
             unsafe {
                 if !IsWindowVisible(hwnd).as_bool()
                     || IsIconic(hwnd).as_bool()
+                    || GetWindowLongPtrW(hwnd, GWL_EXSTYLE) as u32 & WS_EX_TOOLWINDOW.0 != 0
                     || GetWindow(hwnd, GW_OWNER).is_ok_and(|w| !w.is_invalid())
                 {
                     return BOOL(1);

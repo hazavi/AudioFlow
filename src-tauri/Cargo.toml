@@ -53,5 +53,6 @@ strip = true
 panic = "unwind"
 
 [dev-dependencies]
+tauri = { version = "2", features = ["test"] }
 base64 = "0.23"
 minisign-verify = "0.3"
