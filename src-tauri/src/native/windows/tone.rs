@@ -1,5 +1,12 @@
 use super::*;
 use std::time::{Duration, Instant};
+const DURATION: f32 = 0.650;
+const AMPLITUDE: f32 = 0.25;
+fn sample(frame: usize, rate: usize) -> f32 {
+    let t = frame as f32 / rate as f32;
+    let envelope = (t / 0.025).min(1.0) * ((DURATION - t) / 0.050).clamp(0.0, 1.0);
+    (t * 440.0 * std::f32::consts::TAU).sin() * AMPLITUDE * envelope
+}
 pub fn play(enumerator: &IMMDeviceEnumerator, endpoint: &str) -> Result<(), String> {
     unsafe {
         let device = if endpoint == "default" {
@@ -46,8 +53,8 @@ pub fn play(enumerator: &IMMDeviceEnumerator, endpoint: &str) -> Result<(), Stri
         let render: IAudioRenderClient = client.GetService().map_err(err)?;
         let buffer_size = client.GetBufferSize().map_err(err)?;
         let mut frame = 0usize;
-        let total = rate * 350 / 1000;
-        client.Start().map_err(err)?;
+        let total = rate * 650 / 1000;
+        let mut playing = false;
         let started = Instant::now();
         let result = (|| -> Result<(), String> {
             while frame < total && started.elapsed() < Duration::from_secs(2) {
@@ -60,9 +67,7 @@ pub fn play(enumerator: &IMMDeviceEnumerator, endpoint: &str) -> Result<(), Stri
                 }
                 let buffer = render.GetBuffer(count).map_err(err)?;
                 for i in 0..count as usize {
-                    let t = (frame + i) as f32 / rate as f32;
-                    let envelope = (t / 0.025).min(1.0) * ((0.350 - t) / 0.050).clamp(0.0, 1.0);
-                    let sample = (t * 440.0 * std::f32::consts::TAU).sin() * 0.06 * envelope;
+                    let sample = sample(frame + i, rate);
                     for ch in 0..channels {
                         let p = buffer.add(i * block + ch * (bits / 8));
                         if is_float {
@@ -81,6 +86,10 @@ pub fn play(enumerator: &IMMDeviceEnumerator, endpoint: &str) -> Result<(), Stri
                     }
                 }
                 render.ReleaseBuffer(count, 0).map_err(err)?;
+                if !playing {
+                    client.Start().map_err(err)?;
+                    playing = true;
+                }
                 frame += count as usize;
             }
             while client.GetCurrentPadding().map_err(err)? > 0
@@ -92,5 +101,25 @@ pub fn play(enumerator: &IMMDeviceEnumerator, endpoint: &str) -> Result<(), Stri
         })();
         let _ = client.Stop();
         result
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn audible_test_tone_has_fades_and_does_not_clip() {
+        for rate in [44100, 48000, 96000] {
+            let samples: Vec<_> = (0..rate * 650 / 1000)
+                .map(|frame| sample(frame, rate))
+                .collect();
+            let peak = samples.iter().map(|s| s.abs()).fold(0.0, f32::max);
+            let rms = (samples.iter().map(|s| s * s).sum::<f32>() / samples.len() as f32).sqrt();
+            assert!(peak > 0.24 && peak <= 0.25);
+            assert!(rms > 0.15);
+            assert_eq!(samples[0], 0.0);
+            assert!(samples.last().unwrap().abs() < 0.001);
+            assert_eq!(sample(rate, rate), 0.0);
+        }
     }
 }
