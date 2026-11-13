@@ -186,7 +186,7 @@ export function Settings() {
         {toggle(
           "automaticUpdates",
           "Automatically check for updates",
-          "Check GitHub for stable AudioFlow releases at startup and every 12 hours.",
+          "Check at startup and every 5 minutes, including in the tray. Retry failed checks after a minute.",
         )}
         {toggle(
           "updateNotifications",

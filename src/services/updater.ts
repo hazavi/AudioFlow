@@ -11,6 +11,8 @@ import { desktop, useSystem } from "./tauri";
 let candidate: Update | null = null;
 let checking = false;
 let downloading = false;
+const CHECK_INTERVAL = 5 * 60 * 1000;
+const RETRY_INTERVAL = 60 * 1000;
 export function progress(event: DownloadEvent) {
   if (event.event === "Started")
     store.setState({ downloaded: 0, total: event.data.contentLength ?? null });
@@ -22,6 +24,7 @@ export function progress(event: DownloadEvent) {
 }
 export async function checkUpdates(manual = false) {
   const snapshot = useSystem.getState().snapshot;
+  if (!snapshot && !manual) return;
   if (!desktop || !snapshot?.updaterConfigured) {
     store.setState({
       status: "unconfigured",
@@ -38,12 +41,20 @@ export async function checkUpdates(manual = false) {
   )
     return;
   const last = store.getState().lastChecked;
-  if (!manual && last && Date.now() - new Date(last).getTime() < 30 * 60 * 1000)
+  const interval =
+    store.getState().status === "failed" ? RETRY_INTERVAL : CHECK_INTERVAL;
+  if (!manual && last && Date.now() - new Date(last).getTime() < interval)
     return;
   checking = true;
-  store.setState({ status: "checking", error: null });
+  store.setState({
+    status: store.getState().status === "available" ? "available" : "checking",
+    error: null,
+  });
   try {
-    const update = await check({ timeout: 20000 });
+    const update = await check({
+      timeout: 20000,
+      headers: { "Cache-Control": "no-cache" },
+    });
     if (candidate) await candidate.close();
     candidate = update;
     // GitHub's latest endpoint excludes prereleases; reject them defensively as well.
@@ -119,11 +130,29 @@ export async function applyUpdate() {
 }
 export async function startUpdater() {
   if (!desktop) return () => {};
-  const stop = await listen("check-for-updates", () => void checkUpdates());
-  // A hidden or slowly initialized webview may miss the first native timer event.
-  const initial = setTimeout(() => void checkUpdates(), 10000);
+  const run = () => void checkUpdates();
+  let ready = false;
+  const checkWhenReady = () => {
+    const snapshot = useSystem.getState().snapshot;
+    const next = !!(
+      snapshot?.updaterConfigured && snapshot.config.settings.automaticUpdates
+    );
+    if (next && !ready) run();
+    ready = next;
+  };
+  const unsubscribe = useSystem.subscribe(checkWhenReady);
+  window.addEventListener("focus", run);
+  window.addEventListener("online", run);
+  // Native ticks work while the webview is hidden. The frontend timer also
+  // covers a missed event; checkUpdates serializes and throttles both sources.
+  const timer = setInterval(run, RETRY_INTERVAL);
+  checkWhenReady();
+  const stop = await listen("check-for-updates", run).catch(() => () => {});
   return () => {
-    clearTimeout(initial);
+    clearInterval(timer);
+    unsubscribe();
+    window.removeEventListener("focus", run);
+    window.removeEventListener("online", run);
     stop();
   };
 }

@@ -37,7 +37,9 @@ pub fn register(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
             tokio_sleep(std::time::Duration::from_secs(8)).await;
             loop {
                 let _ = handle.emit("check-for-updates", ());
-                tokio_sleep(std::time::Duration::from_secs(12 * 60 * 60)).await;
+                // Wake the shared updater even when WebView timers are throttled
+                // in the tray. Its five-minute throttle prevents duplicate checks.
+                tokio_sleep(std::time::Duration::from_secs(60)).await;
             }
         });
     }
