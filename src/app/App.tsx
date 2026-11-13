@@ -123,14 +123,6 @@ export function App() {
             <Github size={16} />
           </Button>
           <ThemeToggle />
-          <Button
-            size="icon"
-            variant="ghost"
-            aria-label="Settings"
-            onClick={() => setPage("Settings")}
-          >
-            <Settings2 size={16} />
-          </Button>
           <span className="title-divider" />
           <button
             className="window-button"
