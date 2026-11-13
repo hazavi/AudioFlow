@@ -1,11 +1,7 @@
 import { useState } from "react";
 import { ArrowDownToLine, X } from "lucide-react";
 import { useUpdateStore } from "../../stores/useUpdateStore";
-import {
-  checkUpdates,
-  downloadUpdate,
-  installUpdate,
-} from "../../services/updater";
+import { checkUpdates, applyUpdate } from "../../services/updater";
 import { useSystem } from "../../services/tauri";
 import { Button } from "../ui/button";
 import { Dialog } from "../ui/dialog";
@@ -54,11 +50,7 @@ export function UpdateBanner() {
           {update.error && <p className="danger small">{update.error}</p>}
         </div>
         {update.status === "available" && (
-          <Button
-            variant="default"
-            size="sm"
-            onClick={() => void downloadUpdate()}
-          >
+          <Button variant="default" size="sm" onClick={() => setConfirm(true)}>
             Update now
           </Button>
         )}
@@ -103,7 +95,7 @@ export function UpdateBanner() {
         open={confirm}
         onOpenChange={setConfirm}
         title={`Install AudioFlow v${update.version}?`}
-        description="Installing closes and restarts AudioFlow on Windows. Audio routing pauses during installation; your settings and assignments are preserved."
+        description="AudioFlow downloads and verifies the update, closes for installation, and restarts. Audio routing pauses during installation; your settings and assignments are preserved."
       >
         <div className="dialog-body">
           <p>
@@ -116,7 +108,7 @@ export function UpdateBanner() {
               variant="default"
               onClick={() => {
                 setConfirm(false);
-                void installUpdate();
+                void applyUpdate();
               }}
             >
               Install & restart

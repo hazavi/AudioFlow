@@ -103,6 +103,50 @@ describe("signed updater lifecycle", () => {
       "resume_after_update",
     ]);
   });
+  it("downloads, prepares the worker, and installs after a single confirmation", async () => {
+    const order: string[] = [];
+    mocks.invoke.mockImplementation(async (command: string) => {
+      order.push(command);
+    });
+    mocks.relaunch.mockImplementation(async () => {
+      order.push("relaunch");
+    });
+    mocks.check.mockResolvedValue({
+      version: "0.2.0",
+      close: vi.fn(),
+      download: vi.fn(async () => {
+        order.push("download");
+      }),
+      install: vi.fn(async () => {
+        order.push("install");
+      }),
+    });
+    const service = await import("./updater");
+    await service.checkUpdates(true);
+    await service.applyUpdate();
+    expect(order).toEqual([
+      "download",
+      "prepare_update",
+      "install",
+      "relaunch",
+    ]);
+  });
+  it("keeps routing running when a download or signature check fails", async () => {
+    const install = vi.fn();
+    mocks.check.mockResolvedValue({
+      version: "0.2.0",
+      close: vi.fn(),
+      install,
+      download: vi.fn().mockRejectedValue(new Error("Signature rejected")),
+    });
+    const service = await import("./updater");
+    await service.checkUpdates(true);
+    await service.applyUpdate();
+    const { useUpdateStore } = await import("../stores/useUpdateStore");
+    expect(useUpdateStore.getState().status).toBe("failed");
+    expect(mocks.invoke).not.toHaveBeenCalled();
+    expect(install).not.toHaveBeenCalled();
+  });
   it("does not mark an offline check as up to date", async () => {
     mocks.check.mockRejectedValue(new Error("Offline"));
     const service = await import("./updater");

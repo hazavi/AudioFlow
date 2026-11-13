@@ -76,7 +76,22 @@ select,
 textarea {
   font: inherit;
 }
-button {
+button,
+a[href],
+select,
+input[type="checkbox"],
+input[type="radio"],
+input[type="range"],
+summary,
+[role="button"],
+[role="switch"],
+[role="tab"],
+[role="menuitem"] {
+  cursor: pointer;
+}
+:disabled,
+[aria-disabled="true"],
+[data-disabled] {
   cursor: default;
 }
 button,

@@ -5,6 +5,7 @@ import {
   AudioLines,
   ChevronRight,
   CircleHelp,
+  Github,
   LayoutDashboard,
   LoaderCircle,
   Minus,
@@ -112,6 +113,15 @@ export function App() {
             <i />
             {s ? `ROUTING ${routingState}` : "CONNECTING"}
           </span>
+          <Button
+            size="icon"
+            variant="ghost"
+            aria-label="Open AudioFlow on GitHub"
+            title="AudioFlow on GitHub"
+            onClick={() => void action("open_repository")}
+          >
+            <Github size={16} />
+          </Button>
           <ThemeToggle />
           <Button
             size="icon"

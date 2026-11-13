@@ -112,6 +112,11 @@ export async function installUpdate() {
     }
   }
 }
+export async function applyUpdate() {
+  if (checking || downloading) return;
+  if (store.getState().status === "available") await downloadUpdate();
+  if (store.getState().status === "ready") await installUpdate();
+}
 export async function startUpdater() {
   if (!desktop) return () => {};
   const stop = await listen("check-for-updates", () => void checkUpdates());
